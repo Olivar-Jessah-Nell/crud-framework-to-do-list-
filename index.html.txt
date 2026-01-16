@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List </title>
+    <style>
+        :root {
+            --primary: #0f172a; /* Darker Navy */
+            --accent: #2563eb;  /* Brighter Blue */
+            --success: #16a34a; /* Dashboard Green */
+            --danger: #dc2626;  /* Alert Red */
+            --bg: #f1f5f9;      /* Light Gray */
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 50px 20px;
+        }
+
+        .dashboard {
+            background: #ffffff;
+            width: 100%;
+            max-width: 900px; /* Large Dashboard Width */
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 { margin: 0; font-size: 32px; font-weight: 800; }
+        .header p { margin: 10px 0 0; opacity: 0.8; font-size: 14px; }
+
+        .content { padding: 40px; }
+
+        /* Input Grid for Create Operation */
+        .input-section {
+            display: grid;
+            grid-template-columns: 2fr 1.2fr 0.8fr;
+            gap: 15px;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        input {
+            padding: 12px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        input:focus { border-color: var(--accent); }
+
+        .add-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .add-btn:hover { background: #15803d; }
+
+        /* Navigation Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab-btn {
+            padding: 12px 25px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #64748b;
+            font-size: 15px;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* Table Design for Read Operation */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 15px;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 15px;
+        }
+
+        /* Status Badges */
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-late { background: #fee2e2; color: #991b1b; }
+        .badge-ok { background: #dcfce7; color: #166534; }
+
+        .btn-group { display: flex; gap: 8px; }
+
+        .action-btn {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: none;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .complete-btn { background: #dbeafe; color: #1e40af; }
+        .delete-btn { background: #fee2e2; color: #991b1b; }
+
+        .empty-state { text-align: center; padding: 50px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <div class="header">
+        <h1>To-Do List</h1>
+    
+    </div>
+
+    <div class="content">
+        <div class="input-section">
+            <input type="text" id="taskTitle" placeholder="Enter task description...">
+            <input type="date" id="taskDeadline">
+            <button class="add-btn" onclick="addTask()">+ ADD TASK</button>
+        </div>
+
+        <div class="tabs">
+            <button id="t-p" class="tab-btn active" onclick="switchTab('pending')">Current Tasks</button>
+            <button id="t-c" class="tab-btn" onclick="switchTab('completed')">Archive</button>
+        </div>
+
+        <div id="p-view">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Deadline</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="p-list"></tbody>
+            </table>
+        </div>
+
+        <div id="c-view" style="display:none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Date Completed</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="c-list"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. DATA INITIALIZATION & STORAGE RESET
+    // If you had older versions, this ensures the new data structure works.
+    let tasks = JSON.parse(localStorage.getItem('finalProjectData')) || [];
+
+    // 2. CREATE FUNCTION
+    function addTask() {
+        const titleInput = document.getElementById('taskTitle');
+        const deadlineInput = document.getElementById('taskDeadline');
+
+        if (!titleInput.value.trim() || !deadlineInput.value) {
+            alert("Warning: Both Task and Deadline are required!");
+            return;
+        }
+
+        const newTask = {
+            id: Date.now(),
+            title: titleInput.value.trim(),
+            deadline: deadlineInput.value,
+            status: 'pending',
+            completedDate: ''
+        };
+
+        tasks.push(newTask);
+        saveAndRender();
+        
+        // Clear inputs
+        titleInput.value = '';
+        deadlineInput.value = '';
+    }
+
+    // 3. READ & RENDER FUNCTION
+    function render() {
+        const pBody = document.getElementById('p-list');
+        const cBody = document.getElementById('c-list');
+        const today = new Date().toISOString().split('T')[0];
+
+        pBody.innerHTML = '';
+        cBody.innerHTML = '';
+
+        let pCount = 0; let cCount = 0;
+
+        tasks.forEach(task => {
+            const row = document.createElement('tr');
+            if (task.status === 'pending') {
+                const isLate = task.deadline < today;
+                row.innerHTML = `
+                    <td><strong>${task.title}</strong></td>
+                    <td>${task.deadline}</td>
+                    <td><span class="badge ${isLate ? 'badge-late' : 'badge-ok'}">${isLate ? 'LATE' : 'ON TIME'}</span></td>
+                    <td class="btn-group">
+                        <button class="action-btn complete-btn" onclick="completeTask(${task.id})">Complete</button>
+                        <button class="action-btn delete-btn" onclick="deleteTask(${task.id})">Delete</button>
+                    </td>
+                `;
+                pBody.appendChild(row);
+                pCount++;
+            } else {
+                row.innerHTML = `
+                    <td style="color:#94a3b8"><del>${task.title}</del></td>
+                    <td>${task.completedDate}</td>
+                    <td><button class="action-btn delete-btn" onclick="deleteTask(${task.id})">Delete</button></td>
+                `;
+                cBody.appendChild(row);
+                cCount++;
+            }
+        });
+
+        if (pCount === 0) pBody.innerHTML = '<tr><td colspan="4" class="empty-state">No current tasks. Add one above!</td></tr>';
+        if (cCount === 0) cBody.innerHTML = '<tr><td colspan="3" class="empty-state">Archive is empty.</td></tr>';
+    }
+
+    // 4. UPDATE FUNCTION
+    function completeTask(id) {
+        tasks = tasks.map(t => t.id === id ? {...t, status: 'completed', completedDate: new Date().toLocaleDateString()} : t);
+        saveAndRender();
+    }
+
+    // 5. DELETE FUNCTION (Hard Delete)
+    function deleteTask(id) {
+        if(confirm("Are you sure you want to permanently delete this record?")) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveAndRender();
+        }
+    }
+
+    // UTILITIES
+    function saveAndRender() {
+        localStorage.setItem('finalProjectData', JSON.stringify(tasks));
+        render();
+    }
+
+    function switchTab(type) {
+        document.getElementById('p-view').style.display = type === 'pending' ? 'block' : 'none';
+        document.getElementById('c-view').style.display = type === 'completed' ? 'block' : 'none';
+        document.getElementById('t-p').classList.toggle('active', type === 'pending');
+        document.getElementById('t-c').classList.toggle('active', type === 'completed');
+    }
+
+    // Run render on startup
+    window.onload = render;
+</script>
+
+</body>
+</html>
